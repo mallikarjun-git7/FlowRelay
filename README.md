@@ -1,234 +1,149 @@
-# QueueForge
+# FlowRelay
+### Distributed Job Processing & Reliable Webhook Delivery
 
-[![CI](https://github.com/Thaelith/QueueForge/actions/workflows/ci.yml/badge.svg)](https://github.com/Thaelith/QueueForge/actions/workflows/ci.yml)
-![Java](https://img.shields.io/badge/Java-21-blue)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
-![Docker](https://img.shields.io/badge/Docker-ready-blue)
+**Java 21 · Spring Boot · PostgreSQL · React · Docker · Testcontainers · Prometheus**
 
-A production-style distributed job queue built with Java 21, Spring Boot, and PostgreSQL.
+FlowRelay is a distributed background-job processing platform designed around durable persistence, concurrency control, reliable retries, and operational visibility.
 
-![Overview Dashboard](docs/assets/queueforge-overview.png)
-![Jobs List](docs/assets/queueforge-jobs.png)
-![Job Detail Timeline](docs/assets/job-detail-timeline.png)
-![Dead Letter Queue](docs/assets/dead-letter-queue.png)
-![Swagger API](docs/assets/swagger-ui.png)
+The system exposes REST APIs for submitting and managing background tasks, uses PostgreSQL row-level locking to coordinate concurrent workers, and provides a React-based operations dashboard.
 
-## Overview
+## System Architecture
 
-QueueForge is a durable background job queue where API clients submit jobs, worker nodes lease and execute them safely using PostgreSQL row locking, and operators observe queue health through metrics, logs, and an admin API.
-
-Inspired by Sidekiq, Celery, and BullMQ — built to demonstrate backend system design, clean architecture, database-level concurrency, reliable retries, and strong observability.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    Client[Client] -->|HTTP| API[Job API]
-    API -->|writes| DB[(PostgreSQL)]
-    Worker[Worker] -->|SKIP LOCKED| DB
-    Worker -->|executes| Handler[Job Handlers]
-    Admin[Admin API] -->|reads| DB
-    Prometheus[Prometheus] -->|scrapes| API
-    Grafana[Grafana] -->|queries| Prometheus
+```text
+                     REST API Clients
+                            |
+                     Spring Boot API
+                            |
+                      PostgreSQL
+                     Jobs & Events
+                            |
+                  Worker Lease Engine
+                    SKIP LOCKED
+                            |
+                    Job Execution
+                            |
+                  +---------+---------+
+                  |                   |
+             Job Handlers       HTTPS Webhooks
+                  |                   |
+             Job Results         HTTP Responses
+                  |                   |
+                  +---------+---------+
+                            |
+                  Completion / Retry
+                     / Dead Letter
+                            |
+                    React Dashboard
 ```
 
-## Features
+## Core Capabilities
 
-- **Job Submission API** — submit, list, fetch jobs with validation and idempotency keys
-- **Worker Leasing** — `SELECT ... FOR UPDATE SKIP LOCKED` for safe concurrent job claiming
-- **Retry & Dead-Letter** — exponential backoff, automatic dead-letter on max attempts
-- **Background Worker Loop** — configurable `@Scheduled` polling with multi-queue support
-- **Stale Lease Recovery** — automatic recovery of jobs from crashed workers
-- **Admin API** — dashboard summary, queue stats, worker visibility, job event timeline
-- **Job Actions** — requeue, cancel, retry-now from admin endpoints
-- **Observability** — Prometheus metrics, Grafana dashboard, structured MDC logging
-- **Dockerized** — Docker Compose with PostgreSQL, app, Prometheus, Grafana
-- **CI/CD** — GitHub Actions with unit + integration tests
-- **No external deps** — PostgreSQL only, no Redis/Kafka needed
+- **Distributed job processing:** durable job submission, scheduling, priorities and concurrent worker execution.
+- **Database-level concurrency:** PostgreSQL `FOR UPDATE SKIP LOCKED` prevents workers from simultaneously claiming the same eligible job.
+- **Failure recovery:** retry scheduling, dead-letter handling and expired lease recovery.
+- **Webhook delivery:** HTTPS POST delivery through a Java HTTP client, with destination restrictions, timeouts and HTTP failure handling.
+- **Operational dashboard:** React and TypeScript interface for inspecting queue health, jobs and execution history.
+- **Observability:** Prometheus metrics, Grafana configuration and structured logging.
+- **Automated validation:** JUnit and Testcontainers tests covering leasing, worker processing and database workflows.
 
-## Quick Start
+## My Engineering Contributions
+
+This version extends the QueueForge open-source foundation through additional development and integration work.
+
+**Webhook Delivery Integration**
+- Developed `WebhookDeliveryService` for executing outbound HTTPS webhook requests.
+- Integrated webhook delivery into the background job handler pipeline.
+- Added HTTP response validation, request timeouts and restricted destination handling.
+
+**Integration Test Improvements**
+- Stabilized concurrent job-leasing tests and worker-processing test scenarios.
+- Improved test isolation with PostgreSQL Testcontainers.
+- Added database connection safety checks before test-data cleanup.
+- Addressed job scheduling timing issues affecting integration-test reliability.
+
+**Local Development Infrastructure**
+- Updated Docker Compose database port configuration to avoid local PostgreSQL conflicts.
+- Verified the complete Gradle unit and integration-test suite.
+
+## Tech Stack
+
+| Category | Technologies |
+|---|---|
+| Programming | Java 21, TypeScript |
+| Backend | Spring Boot, REST APIs, Gradle |
+| Database | PostgreSQL 16, JDBC, Flyway |
+| Distributed processing | Worker leasing, SQL transactions, row locks |
+| Frontend | React, Tailwind CSS |
+| Testing | JUnit 5, AssertJ, Testcontainers |
+| DevOps | Docker, GitHub Actions |
+| Monitoring | Prometheus, Grafana |
+
+## Local Setup
+
+**Requirements:** Java 21, Docker Desktop, Node.js and npm.
+
+Start the database:
 
 ```bash
-# Start PostgreSQL
 docker compose up -d postgres
-
-# Build and run
-./gradlew bootRun
-
-# Or run everything via Docker
-docker compose up --build app
-
-# Swagger UI
-open http://localhost:8080/swagger-ui.html
-
-# Admin Dashboard
-cd dashboard && npm install && npm run dev
-open http://localhost:5173
 ```
 
-## Full-Stack Demo Flow
+Start the backend:
 
 ```bash
-# 1. Start DB
-docker compose up -d postgres
-
-# 2. Start backend
-./gradlew bootRun
-
-# 3. Start frontend
-cd dashboard && npm install && npm run dev
-
-# 4. Open http://localhost:5173
-# 5. Submit jobs via API, click "Run Once" in settings, refresh dashboard
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/queueforge ./gradlew bootRun
 ```
 
-## Docker Compose
+Start the frontend:
 
 ```bash
-# Just the database
-docker compose up -d postgres
-
-# Database + app
-docker compose up --build app
-
-# Database + app + Prometheus + Grafana
-docker compose --profile observability up --build
-
-# Grafana: http://localhost:3000 (admin/admin)
-# Prometheus: http://localhost:9090
+cd dashboard
+npm ci
+npm run dev
 ```
 
-## API Endpoints
+**Development URLs**
 
-| Method | Path | Phase |
-|--------|------|-------|
-| `POST` | `/api/v1/jobs` | Submit a job |
-| `GET` | `/api/v1/jobs/{id}` | Get job details |
-| `GET` | `/api/v1/jobs` | List jobs (filter by queue, status, type) |
-| `GET` | `/api/v1/workers/config` | Worker configuration |
-| `POST` | `/api/v1/workers/{id}/run-once` | Trigger one poll cycle |
-| `POST` | `/api/v1/workers/{id}/lease` | Manual single-job lease |
-| `POST` | `/api/v1/workers/recover-leases` | Manual lease recovery |
-| `GET` | `/api/v1/admin/dashboard/summary` | Dashboard overview |
-| `GET` | `/api/v1/admin/queues/stats` | Per-queue statistics |
-| `GET` | `/api/v1/admin/workers` | Worker visibility |
-| `GET` | `/api/v1/admin/jobs/{id}/events` | Job event timeline |
-| `POST` | `/api/v1/admin/jobs/{id}/requeue` | Requeue dead-letter |
-| `POST` | `/api/v1/admin/jobs/{id}/cancel` | Cancel job |
-| `POST` | `/api/v1/admin/jobs/{id}/retry-now` | Immediate retry |
-| `GET` | `/actuator/health` | Health check |
-| `GET` | `/actuator/prometheus` | Prometheus metrics |
+- Dashboard: `http://localhost:5173`
+- Backend: `http://localhost:8080`
+- Swagger: `http://localhost:8080/swagger-ui.html`
+- Health: `http://localhost:8080/actuator/health`
 
-## Demo Flow
+## Testing
+
+Run unit tests:
 
 ```bash
-# 1. Start infrastructure
-docker compose up -d postgres
-./gradlew bootRun &
-
-# 2. Submit a job
-curl -X POST localhost:8080/api/v1/jobs \
-  -H "Content-Type: application/json" \
-  -d '{"queue":"default","type":"example.log","payload":{"msg":"hello"}}'
-
-# 3. Process it
-curl -X POST localhost:8080/api/v1/workers/worker-1/run-once
-
-# 4. Submit a failing job with 2 attempts
-curl -X POST localhost:8080/api/v1/jobs \
-  -H "Content-Type: application/json" \
-  -d '{"queue":"default","type":"example.fail","payload":{"message":"test"},"maxAttempts":2}'
-
-# 5. Process it twice → dead-lettered
-curl -s -X POST localhost:8080/api/v1/workers/worker-1/run-once
-
-# 6. Requeue the dead-lettered job
-curl -X POST localhost:8080/api/v1/admin/jobs/{id}/requeue \
-  -H "Content-Type: application/json" -d '{"resetAttempts":true}'
-
-# 7. Check dashboard
-curl localhost:8080/api/v1/admin/dashboard/summary | jq
-
-# 8. View Prometheus metrics
-curl localhost:8080/actuator/prometheus | grep queueforge
+./gradlew test
 ```
 
-## Configuration
-
-Key settings in `application.yml` under `queueforge`:
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `worker.enabled` | `false` | Enable background polling |
-| `worker.queues` | `[default]` | Queues to poll |
-| `worker.poll-interval-ms` | `1000` | Time between poll cycles |
-| `worker.max-jobs-per-poll` | `5` | Max jobs per poll cycle |
-| `worker.lease-duration-seconds` | `30` | How long a lease lives |
-| `recovery.interval-ms` | `30000` | Stale lease recovery interval |
-| `retry.base-delay-seconds` | `10` | Base exponential backoff |
-| `retry.max-delay-seconds` | `300` | Max backoff cap |
-| `cleanup.enabled` | `false` | Enable old job cleanup |
-| `cleanup.completed-retention-days` | `7` | Keep completed jobs for N days |
-
-## Running Tests
+Run PostgreSQL integration tests:
 
 ```bash
-./gradlew test                          # unit tests (no Docker)
-./gradlew integrationTest               # integration tests (Docker required)
-./gradlew clean test integrationTest    # all tests
+./gradlew integrationTest
 ```
 
-## Project Structure
+Run the complete suite:
 
-```
-src/main/java/com/queueforge/
-├── api/              REST controllers + DTOs
-│   └── dto/
-├── application/      Use cases + orchestration
-├── config/           Spring config + properties
-├── domain/           Domain models + enums
-└── infrastructure/   Repository interfaces + JDBC impls
-    └── persistence/
-src/test/java/        Unit + integration tests
-docs/                 Architecture, leasing, observability docs
-observability/        Prometheus + Grafana configs
+```bash
+./gradlew clean test integrationTest --no-daemon --rerun-tasks
 ```
 
-## Docs
+**Latest local validation:** The complete Gradle run succeeded, including 35 integration tests.
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Worker Leasing](docs/WORKER_LEASING.md)
-- [Observability](docs/OBSERVABILITY.md)
-- [API Examples](docs/API_EXAMPLES.md)
-- [Local Demo Guide](docs/DEMO.md)
-- [Commands Reference](docs/COMMANDS.md)
-- [Screenshots Guide](docs/SCREENSHOTS.md)
-- [ADR: PostgreSQL SKIP LOCKED](docs/adr/0001-use-postgresql-skip-locked.md)
-- [ADR: Separate Dashboard](docs/adr/0002-separate-dashboard-from-backend.md)
-- [ADR: Worker Polling](docs/adr/0003-worker-polling-and-lease-recovery.md)
-- [HTTP Request Collection](docs/http/queueforge.http)
+Dedicated webhook HTTP tests, broader destination-security hardening and performance benchmarks remain future work.
 
-## Design Tradeoffs
+## Engineering Roadmap
 
-**PostgreSQL as queue:** No external broker needed. `SKIP LOCKED` handles concurrent workers. Scales for most internal systems. Not Kafka-level throughput.
+- Automated webhook delivery tests and failure classification
+- Persistent webhook attempt history
+- Improved idempotency for external side effects
+- Distributed worker load testing
+- Reproducible performance benchmarks
+- Public deployment with operational monitoring
 
-**At-least-once delivery:** Exactly-once is hard in distributed systems. QueueForge guarantees at-least-once. Handlers should be idempotent.
+## Project Foundation & License
 
-**Polling vs push:** Polling is simple and reliable. Future: PostgreSQL `LISTEN/NOTIFY` for push-based latency improvements.
+FlowRelay extends the [QueueForge](https://github.com/Thaelith/QueueForge) project by Thaelith, distributed under the MIT License. The existing job queue, dashboard and core system architecture form the foundation; the additions developed for FlowRelay are documented above.
 
-## Implemented Phases
-
-- **Phase 1** — Foundation: API, persistence, Flyway, domain model, tests
-- **Phase 2** — Worker Leasing: SKIP LOCKED, retry, dead-letter, concurrency safety
-- **Phase 3** — Background Worker: `@Scheduled` loop, demo handlers, metrics, run-once
-- **Phase 4** — Admin API: dashboard, queue stats, workers, events, requeue/cancel/retry
-- **Phase 5** — Production Polish: CI/CD, Docker, Prometheus/Grafana, MDC logs, cleanup
-- **Phase 6** — Admin Dashboard: React + TypeScript + Tailwind, 7 pages, event timeline
-- **Phase 7** — Portfolio Polish: demo scripts, ADRs, screenshots, docs, repo hygiene
-
-## Contributing & Security
-
-- Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md)
-- Security policy: see [SECURITY.md](SECURITY.md)
-- License: [MIT](LICENSE)
+See [LICENSE](LICENSE) for the applicable license and copyright notice.
