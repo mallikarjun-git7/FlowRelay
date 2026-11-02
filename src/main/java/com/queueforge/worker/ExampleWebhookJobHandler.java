@@ -1,19 +1,22 @@
+
 package com.queueforge.worker;
 
 import com.queueforge.domain.Job;
+import com.queueforge.worker.webhook.WebhookDeliveryService;
 import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ExampleWebhookJobHandler implements JobHandler {
-    private static final Logger log = LoggerFactory.getLogger(ExampleWebhookJobHandler.class);
 
     private final JobHandlerRegistry registry;
+    private final WebhookDeliveryService deliveryService;
 
-    public ExampleWebhookJobHandler(JobHandlerRegistry registry) {
+    public ExampleWebhookJobHandler(
+            JobHandlerRegistry registry,
+            WebhookDeliveryService deliveryService) {
         this.registry = registry;
+        this.deliveryService = deliveryService;
     }
 
     @PostConstruct
@@ -28,9 +31,11 @@ public class ExampleWebhookJobHandler implements JobHandler {
 
     @Override
     public void handle(Job job) {
-        var payload = job.payload();
-        String url = payload.has("url") ? payload.get("url").asText() : "https://example.com/webhook";
-        String method = payload.has("method") ? payload.get("method").asText() : "POST";
-        log.info("Delivering webhook method={} url={} payload={}", method, url, payload);
+        try {
+            deliveryService.deliver(job.payload());
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Webhook delivery failed", e);
+        }
     }
 }
