@@ -11,7 +11,7 @@ public class OpenApiConfig {
     public OpenAPI openAPI() {
         return new OpenAPI()
             .info(new Info()
-                .title("QueueForge API")
+                .title("FlowRelay API")
                 .description("Distributed Job Queue System")
                 .version("v1.0.0"));
     }

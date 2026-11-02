@@ -1,6 +1,6 @@
-# QueueForge Admin Dashboard
+# FlowRelay Admin Dashboard
 
-React + TypeScript + Tailwind CSS admin dashboard for the QueueForge distributed job queue.
+React + TypeScript + Tailwind CSS admin dashboard for the FlowRelay distributed job queue.
 
 ## Tech Stack
 
@@ -41,7 +41,7 @@ Vite's dev server proxies `/api` and `/actuator` requests to the backend automat
 
 ## Backend Dependency
 
-Requires the QueueForge Spring Boot backend running on port 8080:
+Requires the FlowRelay Spring Boot backend running on port 8080:
 ```bash
 docker compose up -d postgres
 ./gradlew bootRun

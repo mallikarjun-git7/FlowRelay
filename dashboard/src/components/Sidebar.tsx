@@ -13,7 +13,7 @@ export default function Sidebar() {
   return (
     <aside className="w-56 bg-surface-container-low border-r border-outline-variant flex flex-col shrink-0">
       <div className="px-5 py-4 border-b border-outline-variant">
-        <div className="text-sm font-semibold tracking-tight text-on-surface">QueueForge</div>
+        <div className="text-sm font-semibold tracking-tight text-on-surface">FlowRelay</div>
         <div className="text-[11px] text-on-surface-variant mt-0.5 font-mono">Admin Dashboard</div>
       </div>
       <nav className="flex-1 px-3 py-3 space-y-0.5">
@@ -36,7 +36,7 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="px-5 py-3 border-t border-outline-variant text-[11px] text-on-surface-variant font-mono">
-        QueueForge v1.0
+        FlowRelay v1.0
       </div>
     </aside>
   );
