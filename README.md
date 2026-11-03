@@ -4,7 +4,7 @@
 
 **Java 21 · Spring Boot 3.3 · PostgreSQL 16 · React · TypeScript · Docker · Spring Security · Testcontainers**
 
-[**Live Application**](https://flowrelay-ai-backend.onrender.com/) · [**Source Code**](https://github.com/mallikarjun-git7/FlowRelay/tree/feature/webhook-delivery) · [**Health Endpoint**](https://flowrelay-ai-backend.onrender.com/actuator/health)
+[**Live Application**](https://flowrelay-ai-backend.onrender.com/login)· [**Source Code**](https://github.com/mallikarjun-git7/FlowRelay/tree/feature/webhook-delivery) · [**Health Endpoint**](https://flowrelay-ai-backend.onrender.com/actuator/health)
 
 > **Access note:** The deployed dashboard currently requires administrator credentials. Public sign-up and a read-only guest demo are **not implemented**. The public health endpoint is accessible without authentication.
 
