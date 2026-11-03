@@ -10,7 +10,7 @@ COPY dashboard/ ./
 RUN npm run build
 
 # Stage 2: Build Spring Boot with React assets
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:25-jdk-alpine AS builder
 
 WORKDIR /workspace
 
@@ -23,7 +23,7 @@ RUN chmod +x gradlew && \
     ./gradlew bootJar --no-daemon
 
 # Stage 3: Run Spring Boot
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 RUN addgroup -S appgroup && \
     adduser -S appuser -G appgroup
