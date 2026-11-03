@@ -1,3 +1,4 @@
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.0'
@@ -20,10 +21,14 @@ repositories {
 }
 
 dependencies {
+    // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Security: browser login, authentication, sessions and CSRF protection
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 
     // OpenAPI
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
@@ -36,7 +41,7 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
 
-    // Spring Data Commons (for Page/Pageable abstraction)
+    // Spring Data Commons
     implementation 'org.springframework.data:spring-data-commons'
 
     // JSON processing
@@ -45,6 +50,7 @@ dependencies {
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     testImplementation 'org.testcontainers:postgresql:1.21.4'
 
@@ -60,6 +66,7 @@ tasks.named('test') {
 tasks.register('integrationTest', Test) {
     description = 'Runs integration tests with Testcontainers (requires Docker).'
     group = 'verification'
+
     useJUnitPlatform {
         includeTags 'integration'
     }

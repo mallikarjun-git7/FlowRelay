@@ -17,10 +17,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "FLOWRELAY_REQUIRE_API_KEY=true",
+    "queueforge.security.admin-api-key=integration-only-key"
+})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @Tag("integration")
@@ -53,7 +57,7 @@ class JobControllerIntegrationTest {
             null
         );
 
-        String response = mockMvc.perform(post("/api/v1/jobs")
+        String response = mockMvc.perform(post("/api/v1/jobs").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
@@ -66,7 +70,7 @@ class JobControllerIntegrationTest {
 
         String id = objectMapper.readTree(response).get("id").asText();
 
-        mockMvc.perform(get("/api/v1/jobs/" + id))
+        mockMvc.perform(get("/api/v1/jobs/" + id).header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(id))
             .andExpect(jsonPath("$.type").value("email.send"));
@@ -74,7 +78,7 @@ class JobControllerIntegrationTest {
 
     @Test
     void shouldReturnNotFoundForUnknownJob() throws Exception {
-        mockMvc.perform(get("/api/v1/jobs/00000000-0000-0000-0000-000000000000"))
+        mockMvc.perform(get("/api/v1/jobs/00000000-0000-0000-0000-000000000000").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.status").value(404));
     }
@@ -91,12 +95,12 @@ class JobControllerIntegrationTest {
             "unique-key-123"
         );
 
-        mockMvc.perform(post("/api/v1/jobs")
+        mockMvc.perform(post("/api/v1/jobs").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/v1/jobs")
+        mockMvc.perform(post("/api/v1/jobs").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isConflict())
@@ -115,12 +119,12 @@ class JobControllerIntegrationTest {
             null
         );
 
-        mockMvc.perform(post("/api/v1/jobs")
+        mockMvc.perform(post("/api/v1/jobs").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/v1/jobs?queue=list-test"))
+        mockMvc.perform(get("/api/v1/jobs?queue=list-test").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content").isArray())
             .andExpect(jsonPath("$.content[0].queue").value("list-test"));
@@ -130,7 +134,7 @@ class JobControllerIntegrationTest {
     void shouldReturnBadRequestForInvalidPayload() throws Exception {
         String invalidJson = "{\"queue\":\"\",\"type\":\"test\",\"payload\":null}";
 
-        mockMvc.perform(post("/api/v1/jobs")
+        mockMvc.perform(post("/api/v1/jobs").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
             .andExpect(status().isBadRequest())

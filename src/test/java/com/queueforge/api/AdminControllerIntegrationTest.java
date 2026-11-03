@@ -24,10 +24,14 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "FLOWRELAY_REQUIRE_API_KEY=true",
+    "queueforge.security.admin-api-key=integration-only-key"
+})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 @Tag("integration")
@@ -58,7 +62,7 @@ class AdminControllerIntegrationTest {
     void shouldReturnDashboardSummary() throws Exception {
         submitJob("default", "example.log");
 
-        mockMvc.perform(get("/api/v1/admin/dashboard/summary"))
+        mockMvc.perform(get("/api/v1/admin/dashboard/summary").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.totalJobs").value(1))
             .andExpect(jsonPath("$.pendingJobs").value(1));
@@ -69,7 +73,7 @@ class AdminControllerIntegrationTest {
         submitJob("emails", "example.email");
         submitJob("emails", "example.email");
 
-        mockMvc.perform(get("/api/v1/admin/queues/stats"))
+        mockMvc.perform(get("/api/v1/admin/queues/stats").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.queues").isArray())
             .andExpect(jsonPath("$.queues[?(@.queueName=='emails')].total").value(2));
@@ -83,7 +87,7 @@ class AdminControllerIntegrationTest {
             "UPDATE jobs SET status='RUNNING', locked_by='worker-1', locked_until=now()+interval '1 hour', updated_at=now() WHERE id=?",
             jobId);
 
-        mockMvc.perform(get("/api/v1/admin/workers"))
+        mockMvc.perform(get("/api/v1/admin/workers").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.workers").isArray())
             .andExpect(jsonPath("$.workers[?(@.workerId=='worker-1')]").exists());
@@ -94,14 +98,14 @@ class AdminControllerIntegrationTest {
         UUID jobId = submitJob("default", "example.log");
         jdbcTemplate.update("UPDATE jobs SET status='DEAD_LETTERED', dead_lettered_at=now() WHERE id=?", jobId);
 
-        mockMvc.perform(post("/api/v1/admin/jobs/" + jobId + "/requeue")
+        mockMvc.perform(post("/api/v1/admin/jobs/" + jobId + "/requeue").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"resetAttempts\":true,\"reason\":\"test\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.newStatus").value("PENDING"));
 
-        mockMvc.perform(get("/api/v1/admin/jobs/" + jobId + "/events"))
+        mockMvc.perform(get("/api/v1/admin/jobs/" + jobId + "/events").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[-1].eventType").value("JOB_REQUEUED"));
     }
@@ -110,7 +114,7 @@ class AdminControllerIntegrationTest {
     void shouldRejectRequeueOnInvalidStatus() throws Exception {
         UUID jobId = submitJob("default", "example.log");
 
-        mockMvc.perform(post("/api/v1/admin/jobs/" + jobId + "/requeue")
+        mockMvc.perform(post("/api/v1/admin/jobs/" + jobId + "/requeue").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(status().isConflict());
@@ -120,7 +124,7 @@ class AdminControllerIntegrationTest {
     void shouldCancelPendingJob() throws Exception {
         UUID jobId = submitJob("default", "example.log");
 
-        mockMvc.perform(post("/api/v1/admin/jobs/" + jobId + "/cancel"))
+        mockMvc.perform(post("/api/v1/admin/jobs/" + jobId + "/cancel").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.newStatus").value("CANCELLED"));
@@ -134,14 +138,14 @@ class AdminControllerIntegrationTest {
         UUID jobId = submitJob("default", "example.log");
         jdbcTemplate.update("UPDATE jobs SET status='RETRY_SCHEDULED', run_at=now()+interval '1 hour' WHERE id=?", jobId);
 
-        mockMvc.perform(post("/api/v1/admin/jobs/" + jobId + "/retry-now")
+        mockMvc.perform(post("/api/v1/admin/jobs/" + jobId + "/retry-now").header("X-QueueForge-Admin-Key", "integration-only-key").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"resetAttempts\":false}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.newStatus").value("PENDING"));
 
-        mockMvc.perform(get("/api/v1/admin/jobs/" + jobId + "/events"))
+        mockMvc.perform(get("/api/v1/admin/jobs/" + jobId + "/events").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[-1].eventType").value("JOB_RETRY_NOW"));
     }
@@ -150,7 +154,7 @@ class AdminControllerIntegrationTest {
     void shouldReturnJobEventsAfterSubmission() throws Exception {
         UUID jobId = submitJob("default", "example.log");
 
-        mockMvc.perform(get("/api/v1/admin/jobs/" + jobId + "/events"))
+        mockMvc.perform(get("/api/v1/admin/jobs/" + jobId + "/events").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$[0].eventType").value("JOB_CREATED"));
@@ -158,7 +162,7 @@ class AdminControllerIntegrationTest {
 
     @Test
     void shouldReturn404ForUnknownJobEvents() throws Exception {
-        mockMvc.perform(get("/api/v1/admin/jobs/00000000-0000-0000-0000-000000000000/events"))
+        mockMvc.perform(get("/api/v1/admin/jobs/00000000-0000-0000-0000-000000000000/events").header("X-QueueForge-Admin-Key", "integration-only-key"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray())
             .andExpect(jsonPath("$").isEmpty());
