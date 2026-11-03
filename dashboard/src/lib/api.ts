@@ -27,6 +27,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // AI (opt-in, read-only)
+  diagnoseJob: (jobId: string) =>
+    request<import('../types/api').AiDiagnosisResponse>(`/api/v1/admin/ai/jobs/${jobId}/diagnose`, {
+      method: 'POST',
+    }),
+
   // Admin
   getDashboardSummary: () =>
     request<import('../types/api').DashboardSummaryResponse>('/api/v1/admin/dashboard/summary'),

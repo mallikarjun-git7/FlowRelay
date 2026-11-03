@@ -26,6 +26,11 @@ services:
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-queueforge}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-queueforge_dev_password}
       QUEUEFORGE_WORKER_ENABLED: "true"
+      FLOWRELAY_AI_PROVIDER: ${FLOWRELAY_AI_PROVIDER:-ollama}
+      FLOWRELAY_OLLAMA_URL: ${FLOWRELAY_OLLAMA_URL:-http://host.docker.internal:11434/api/generate}
+      FLOWRELAY_OLLAMA_MODEL: ${FLOWRELAY_OLLAMA_MODEL:-qwen2.5:1.5b}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      FLOWRELAY_AI_MODEL: ${FLOWRELAY_AI_MODEL:-gpt-6-luna}
     depends_on:
       postgres:
         condition: service_healthy

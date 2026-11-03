@@ -70,6 +70,14 @@ export interface JobEventResponse {
   message: string;
 }
 
+export interface AiDiagnosisResponse {
+  jobId: string;
+  jobStatus: string;
+  model: string;
+  analysis: string;
+  disclaimer: string;
+}
+
 export interface AdminActionResponse {
   success: boolean;
   message: string;

@@ -51,6 +51,15 @@ management:
     tags:
       application: ${spring.application.name}
 
+# Phase 1: optional, read-only failure diagnosis. Never commit a real API key.
+flowrelay:
+  ai:
+    provider: ${FLOWRELAY_AI_PROVIDER:ollama}
+    ollama-url: ${FLOWRELAY_OLLAMA_URL:http://host.docker.internal:11434/api/generate}
+    ollama-model: ${FLOWRELAY_OLLAMA_MODEL:qwen2.5:1.5b}
+    api-key: ${OPENAI_API_KEY:}
+    model: ${FLOWRELAY_AI_MODEL:gpt-6-luna}
+
 logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} [%X{workerId}][%X{jobId}] %msg%n"

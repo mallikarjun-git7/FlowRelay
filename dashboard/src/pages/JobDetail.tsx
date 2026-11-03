@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import type { Job, JobEventResponse } from '../types/api';
+import type { Job, JobEventResponse, AiDiagnosisResponse } from '../types/api';
 import StatusBadge from '../components/StatusBadge';
 import Loading from '../components/Loading';
 
@@ -13,6 +13,23 @@ export default function JobDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+  const [aiDiagnosis, setAiDiagnosis] = useState<AiDiagnosisResponse | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const analyzeFailure = async () => {
+    if (!id || aiLoading) return;
+    setAiLoading(true);
+    setAiError('');
+    setAiDiagnosis(null);
+    try {
+      setAiDiagnosis(await api.diagnoseJob(id));
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'AI request failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const fetchData = () => {
     if (!id) return;
@@ -47,6 +64,29 @@ export default function JobDetail() {
       {actionMsg && (
         <div className="mb-4 px-4 py-2 rounded text-sm border bg-surface-container border-outline-variant text-on-surface">
           {actionMsg}
+        </div>
+      )}
+
+      {(job.status === 'RETRY_SCHEDULED' || job.status === 'DEAD_LETTERED') && (
+        <div className="bg-surface-container rounded-md border border-outline-variant p-4 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-on-surface">AI Failure Diagnosis</h3>
+              <p className="text-xs text-on-surface-variant mt-1">Optional, read-only analysis of this job's failure metadata.</p>
+            </div>
+            <button type="button" onClick={analyzeFailure} disabled={aiLoading}
+              className="px-3 py-2 text-xs rounded bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 disabled:opacity-50">
+              {aiLoading ? 'Analyzing...' : 'Analyze failure with AI'}
+            </button>
+          </div>
+          {aiError && <p role="alert" className="text-xs text-error mb-2">{aiError}</p>}
+          {aiDiagnosis && (
+            <div>
+              <p className="text-xs text-on-surface-variant mb-2">Model: {aiDiagnosis.model}</p>
+              <pre className="whitespace-pre-wrap break-words font-sans text-sm text-on-surface">{aiDiagnosis.analysis}</pre>
+              <p className="text-xs text-on-surface-variant mt-3">{aiDiagnosis.disclaimer}</p>
+            </div>
+          )}
         </div>
       )}
 

@@ -60,6 +60,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleHttpStatus(
+            org.springframework.web.server.ResponseStatusException ex, HttpServletRequest request) {
+        var status = ex.getStatusCode();
+        ErrorResponse error = new ErrorResponse(
+            Instant.now(), status.value(),
+            HttpStatus.valueOf(status.value()).getReasonPhrase(),
+            ex.getReason() != null ? ex.getReason() : "Request could not be processed",
+            request.getRequestURI(), List.of());
+        return ResponseEntity.status(status).body(error);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(
