@@ -1,5 +1,5 @@
 # Stage 1: Build React dashboard
-FROM node:22-alpine AS frontend
+FROM node:26-alpine AS frontend
 
 WORKDIR /frontend
 
